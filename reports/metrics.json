@@ -1,0 +1,68 @@
+{
+  "split": {
+    "train_days": [
+      1,
+      40
+    ],
+    "val_days": [
+      41,
+      47
+    ],
+    "test_days": [
+      48,
+      62
+    ]
+  },
+  "best_iteration": 61,
+  "ours": {
+    "minutes": 41091,
+    "accuracy": 0.8674,
+    "balanced_accuracy": 0.5312,
+    "macro_f1": 0.554,
+    "weighted_f1": 0.8631,
+    "accuracy_pm10min": 0.8889
+  },
+  "ablation_smoothed_3min": {
+    "minutes": 41091,
+    "accuracy": 0.8631,
+    "balanced_accuracy": 0.4955,
+    "macro_f1": 0.5224,
+    "weighted_f1": 0.8586,
+    "accuracy_pm10min": 0.8917
+  },
+  "per_user": {
+    "user1": {
+      "minutes": 20556,
+      "accuracy": 0.9023,
+      "balanced_accuracy": 0.5937,
+      "macro_f1": 0.6274,
+      "weighted_f1": 0.8986,
+      "accuracy_pm10min": 0.9249
+    },
+    "user2": {
+      "minutes": 20535,
+      "accuracy": 0.8326,
+      "balanced_accuracy": 0.4981,
+      "macro_f1": 0.496,
+      "weighted_f1": 0.8305,
+      "accuracy_pm10min": 0.8529
+    }
+  },
+  "authors_predictions": {
+    "minutes": 39934,
+    "accuracy": 0.7247,
+    "balanced_accuracy": 0.2426,
+    "macro_f1": 0.2478,
+    "weighted_f1": 0.722,
+    "accuracy_pm10min": 0.7592,
+    "coverage": 0.9718
+  },
+  "ours_on_same_minutes": {
+    "minutes": 39934,
+    "accuracy": 0.8759,
+    "balanced_accuracy": 0.5398,
+    "macro_f1": 0.5593,
+    "weighted_f1": 0.8723,
+    "accuracy_pm10min": 0.8969
+  }
+}

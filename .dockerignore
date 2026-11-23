@@ -1,0 +1,10 @@
+# The data is mounted at run time, never baked into the image
+data/
+.git/
+.github/
+tests/
+**/__pycache__/
+*.pyc
+*.db
+.venv/
+.DS_Store

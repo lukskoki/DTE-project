@@ -1,0 +1,65 @@
+# Digital shadow of the SDHAR-HOME smart home.
+# Prepare the data first (see README), then:  docker compose up --build
+#   dashboard    http://localhost:8501
+#   shadow API   http://localhost:8000/docs
+#   MQTT broker  localhost:1883 (websockets 9001)
+x-python: &python
+  build: .
+  image: sdhar-shadow:latest
+  environment: &env
+    MQTT_HOST: mosquitto
+    MQTT_PORT: "1883"
+  volumes:
+    - ./data:/app/data:ro
+    - ./config:/app/config:ro
+    - ./models:/app/models:ro
+  depends_on: [mosquitto]
+  restart: unless-stopped
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883", "9001:9001"]
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  # plays the recorded sensor, location and wristband events onto MQTT in simulated time
+  replay:
+    <<: *python
+    command: python -m services.replay.main
+    environment:
+      <<: *env
+      REPLAY_SPEED: ${REPLAY_SPEED:-300}
+      REPLAY_DAYS: ${REPLAY_DAYS:-48-62}
+
+  # the digital shadow: live state of rooms, sensors and residents, history, HTTP + WebSocket API
+  shadow:
+    <<: *python
+    command: uvicorn services.shadow.app:app --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+    environment:
+      <<: *env
+      SHADOW_DB: /tmp/shadow.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # activity estimates every simulated minute + routine check (missed meals and medication)
+  inference:
+    <<: *python
+    command: python -m services.inference.main
+
+  dashboard:
+    <<: *python
+    command: streamlit run services/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    ports: ["8501:8501"]
+    environment:
+      SHADOW_URL: http://shadow:8000
+    volumes:
+      - ./reports:/app/reports:ro
+    depends_on:
+      shadow:
+        condition: service_healthy
