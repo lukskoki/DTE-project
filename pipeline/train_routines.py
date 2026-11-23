@@ -44,7 +44,8 @@ def drawer_users(feat_minute: pd.DataFrame, drawer_room: str) -> list[str]:
 def run_checker(routines, feat: pd.DataFrame, pred: np.ndarray, drawer_minutes: set, drawer_room: str,
                 start: float, meds_from_model: bool = False) -> RoutineChecker:
     chk = RoutineChecker(routines, started_at=start, meds_from_model=meds_from_model)
-    feat = feat.assign(pred=pred).sort_values(["minute", "user"])
+    cols = ["minute", "user", "pred", "me_away", f"me_{drawer_room}"]   # only what is read below (fast)
+    feat = feat.assign(pred=pred)[cols].sort_values(["minute", "user"])
     for minute, rows in feat.groupby("minute", sort=True):
         ts = minute.timestamp()
         for r in rows.itertuples():

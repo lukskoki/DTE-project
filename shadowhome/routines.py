@@ -133,9 +133,14 @@ class RoutineChecker:
         self.meds_from_model = meds_from_model
         self.started_at = started_at          # windows that began before this are not judged
         self.instances: dict[tuple, Instance] = {}
+        self._ensured: tuple[float, float] | None = None   # local day already set up: [start, end)
 
     def _ensure(self, now: float) -> None:
+        """Create today's and yesterday's window instances (once per local day)."""
+        if self._ensured and self._ensured[0] <= now < self._ensured[1]:
+            return
         today = pd.Timestamp(now, unit="s", tz="UTC").tz_convert(TIMEZONE).normalize()
+        self._ensured = (today.timestamp(), (today + pd.DateOffset(days=1)).timestamp())
         for d in (today - pd.Timedelta(days=1), today):
             for user, wins in self.routines.items():
                 for w in wins:
