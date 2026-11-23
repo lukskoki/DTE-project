@@ -64,7 +64,7 @@ sensors:
     room_source: ble-vote
     ble_vote: {room: kitchen, share: 0.56, lift: 2.6, votes: 604}
     top_activities: [MAKE SIMPLE FOOD x5.6 (n=345), COOK x2.2 (n=126), EAT x1.5 (n=481)]
-    evidence: most opened contact (1,575), MAKE SIMPLE FOOD lift 5.6, COOK 2.2
+    evidence: most opened contact (1,038 openings), MAKE SIMPLE FOOD lift 5.6, COOK 2.2
   c7:
     type: contact
     room: kitchen
@@ -124,7 +124,7 @@ sensors:
   m4:
     type: movement
     room: living_room
-    object: motion (living room
+    object: motion (living room, dining zone)
     room_source: ble-vote
     ble_vote: {room: living_room, share: 0.45, lift: 2.7, votes: 1236}
     top_activities: [EAT x2.3 (n=1538), WATCH TV x1.5 (n=444), RELAX x1.5 (n=272)]
@@ -132,7 +132,7 @@ sensors:
   m5:
     type: movement
     room: living_room
-    object: motion (living room
+    object: motion (living room, sofa zone)
     room_source: ble-vote
     ble_vote: {room: living_room, share: 0.33, lift: 2.0, votes: 3019}
     top_activities: [WATCH TV x2.3 (n=1518), RELAX x2.0 (n=831), MEDITATE x1.4 (n=12)]
@@ -148,7 +148,7 @@ sensors:
   m7:
     type: movement
     room: hallway
-    object: motion (hall
+    object: motion (hall, zone 1)
     room_source: curated
     ble_vote: {room: bathroom, share: 0.2, lift: 1.1, votes: 3453}
     top_activities: [MEDITATE x1.4 (n=13), DRESS x1.4 (n=191), OTHER x1.3 (n=2114)]
@@ -156,7 +156,7 @@ sensors:
   m8:
     type: movement
     room: hallway
-    object: motion (hall
+    object: motion (hall, zone 2)
     room_source: ble-vote
     ble_vote: {room: hallway, share: 0.15, lift: 2.3, votes: 500}
     top_activities: [CHORES x2.2 (n=54), OTHER x1.9 (n=381), DRESS x1.9 (n=31)]

@@ -25,11 +25,11 @@ c8:  {object: street door, evidence: "76% of openings within 3 min of someone le
 m1:  {object: motion (bathroom), evidence: "SHOWER lift 5.9, BATHROOM ACTIVITY 4.1"}
 m2:  {object: motion (study), room: study, evidence: "WORK lift 3.4, CHORES 4.3"}
 m3:  {object: motion (bedroom), evidence: "SLEEP lift 2.8, READ 3.0"}
-m4:  {object: motion (living room, dining zone), evidence: "EAT lift 2.3"}
-m5:  {object: motion (living room, sofa zone), evidence: "WATCH TV lift 2.3, RELAX 2.0"}
+m4:  {object: "motion (living room, dining zone)", evidence: "EAT lift 2.3"}
+m5:  {object: "motion (living room, sofa zone)", evidence: "WATCH TV lift 2.3, RELAX 2.0"}
 m6:  {object: motion (kitchen), evidence: "COOK lift 2.7, DISHWASHING 3.1"}
-m7:  {object: motion (hall, zone 1), room: hallway, evidence: "no activity stands out; BLE vote weak (bathroom, lift 1.1); paper places a second zone sensor in the hall"}
-m8:  {object: motion (hall, zone 2), evidence: "BLE vote hallway (lift 2.4)"}
+m7:  {object: "motion (hall, zone 1)", room: hallway, evidence: "no activity stands out; BLE vote weak (bathroom, lift 1.1); paper places a second zone sensor in the hall"}
+m8:  {object: "motion (hall, zone 2)", evidence: "BLE vote hallway (lift 2.4)"}
 
 v1:  {object: bed (uncertain), evidence: "SLEEP lift 2.5 but also MAKE SIMPLE FOOD 3.0"}
 v2:  {object: kitchen cabinet, evidence: "MAKE SIMPLE FOOD lift 5.2, COOK 3.2"}

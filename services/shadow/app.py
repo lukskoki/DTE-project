@@ -8,6 +8,7 @@ Endpoints
   GET  /config                        rooms, floor plan, sensor -> room/object map
   GET  /days                          local dates that have data
   GET  /timeline?user=user2&date=...  estimated vs labelled activity, rooms, alerts for one day
+  GET  /usual?user=user2              the resident's usual day: mean labelled hours per activity, train days
   GET  /alerts                        recent alerts
   POST /replay                        forward a control command to the replayer
   WS   /stream                        pushes /state once per second
@@ -15,18 +16,19 @@ Endpoints
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import os
 from contextlib import asynccontextmanager
 
 import pandas as pd
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from shadowhome import mqtt as bus
 from shadowhome.config import load_home
 from shadowhome.schema import (
-    ALERTS_TOPIC, ALL_TOPICS, CLOCK_TOPIC, CONTROL_TOPIC, LABELS_FILE, TIMEZONE,
+    ALERTS_TOPIC, ALL_TOPICS, CLOCK_TOPIC, CONTROL_TOPIC, FIRST_DAY, LABELS_FILE, TIMEZONE, TRAIN_DAYS,
 )
 from services.shadow.model import HomeShadow, parse_ts
 from services.shadow.store import Store
@@ -126,7 +128,7 @@ class ShadowService:
     def timeline(self, user: str, date: str) -> dict:
         t0, t1 = self.day_bounds(date)
         pred = self.store.query(
-            "SELECT ts, activity, confidence FROM activity_log WHERE user=? AND ts>=? AND ts<? ORDER BY ts",
+            "SELECT ts, activity, confidence FROM activity_log WHERE user=? AND ts>? AND ts<=? ORDER BY ts",
             (user, t0, t1))
         loc_before = self.store.query(
             "SELECT ts, room FROM location_log WHERE user=? AND ts<? ORDER BY ts DESC LIMIT 1", (user, t0))
@@ -135,15 +137,10 @@ class ShadowService:
         alerts = self.store.query(
             "SELECT ts, kind, expected_at, message FROM alert_log WHERE user=? AND ts>=? AND ts<? ORDER BY ts",
             (user, t0, t1))
-        actual = []
-        if self.labels is not None:
-            lab = self.labels[self.labels["user"] == user]
-            lab = lab[(lab["end"].map(pd.Timestamp.timestamp) > t0) & (lab["start"].map(pd.Timestamp.timestamp) < t1)]
-            for r in lab.itertuples():
-                actual.append({"start": max(r.start.timestamp(), t0), "end": min(r.end.timestamp(), t1),
-                               "value": r.activity})
+        actual = self.labelled(user, t0, t1)
         loc_rows = [(t0, loc_before[0][1])] + loc if loc_before else loc
-        predicted = self.segments(pred, 1, t0, t1, max_len=120)
+        # an estimate stamped at minute m describes the minute (m - 1 min, m]
+        predicted = self.segments([(ts - 60, act, conf) for ts, act, conf in pred], 1, t0, t1, max_len=60)
         return {
             "user": user, "date": date, "timezone": TIMEZONE, "start": t0, "end": t1,
             "predicted": predicted,
@@ -153,6 +150,31 @@ class ShadowService:
             "hours_predicted": self.hours(predicted),
             "hours_actual": self.hours(actual),
         }
+
+    def labelled(self, user: str, t0: float, t1: float) -> list[dict]:
+        """Ground-truth activity segments of a resident, clipped to [t0, t1)."""
+        if self.labels is None:
+            return []
+        lab = self.labels[self.labels["user"] == user]
+        t0_ts, t1_ts = pd.Timestamp(t0, unit="s", tz="UTC"), pd.Timestamp(t1, unit="s", tz="UTC")
+        lab = lab[(lab["end"] > t0_ts) & (lab["start"] < t1_ts)]
+        return [{"start": max(r.start.timestamp(), t0), "end": min(r.end.timestamp(), t1), "value": r.activity}
+                for r in lab.itertuples()]
+
+    @functools.lru_cache(maxsize=8)
+    def usual(self, user: str) -> dict:
+        """The resident's usual day: mean labelled hours per activity over the full local
+        days inside the training days (the first local day starts at 02:00, so it is skipped)."""
+        first = pd.Timestamp(FIRST_DAY) + pd.Timedelta(days=1)
+        dates = pd.date_range(first, periods=TRAIN_DAYS[-1] - TRAIN_DAYS[0], freq="D").strftime("%Y-%m-%d")
+        total: dict[str, float] = {}
+        for d in dates:
+            t0, t1 = self.day_bounds(d)
+            for act, h in self.hours(self.labelled(user, t0, t1)).items():
+                total[act] = total.get(act, 0.0) + h
+        n = len(dates)
+        return {"user": user, "from": dates[0], "to": dates[-1], "days": n,
+                "hours": {a: round(h / n, 2) for a, h in sorted(total.items(), key=lambda kv: -kv[1])}}
 
     @staticmethod
     def hours(segs: list[dict]) -> dict:
@@ -209,6 +231,11 @@ def timeline(user: str, date: str | None = None):
     return service.timeline(user, date)
 
 
+@app.get("/usual")
+def usual(user: str):
+    return service.usual(user)
+
+
 @app.get("/alerts")
 def alerts(limit: int = 50):
     rows = service.store.query(
@@ -218,6 +245,8 @@ def alerts(limit: int = 50):
 
 @app.post("/replay")
 def replay(cmd: dict):
+    if service.client is None:
+        raise HTTPException(503, "the shadow is not connected to MQTT")
     bus.publish(service.client, CONTROL_TOPIC, cmd)
     return {"sent": cmd}
 

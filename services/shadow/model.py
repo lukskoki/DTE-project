@@ -39,9 +39,11 @@ class Sensor:
     last_ts: float | None = None
     last_active_ts: float | None = None
     active_above_w: float | None = None
+    readings: dict = field(default_factory=dict)  # latest value per quantity (th sensors send two)
 
-    def update(self, ts: float, value: float, state: str | None) -> None:
+    def update(self, ts: float, value: float, state: str | None, quantity: str | None = None) -> None:
         self.value, self.state, self.last_ts = value, state, ts
+        self.readings[quantity or self.type] = value
         if self._is_activation(value):
             self.last_active_ts = ts
 
@@ -156,7 +158,7 @@ class HomeShadow:
             if s is None:  # a sensor the config does not know: still keep it
                 s = self.sensors[p["sensor_id"]] = Sensor(p["sensor_id"], p["sensor_type"],
                                                           p.get("room") or "unknown", "unknown")
-            s.update(parse_ts(p["ts"]), p.get("value"), p.get("state"))
+            s.update(parse_ts(p["ts"]), p.get("value"), p.get("state"), p.get("sensor_type"))
 
     def on_location(self, p: dict) -> bool:
         """Returns True when the resident changed room."""

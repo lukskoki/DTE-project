@@ -124,19 +124,23 @@ class Replayer:
                 "value": float(self.value[i]), "state": self.state[i],
             })
 
+    def advance_to(self, sim_ns: int) -> bool:
+        """Publish every event up to sim_ns. Returns True once the last day is done."""
+        self.sim_ns = sim_ns
+        while self.i < len(self.ts) and self.ts[self.i] <= sim_ns and self.day[self.i] <= self.last_day:
+            self.publish_event(self.i)
+            self.i += 1
+        return self.i >= len(self.ts) or self.day[self.i] > self.last_day
+
     def run(self) -> None:
         last_clock = 0.0
         while True:
             now = time.monotonic()
             with self.lock:
-                if not self.paused:
-                    self.sim_ns = int(self.anchor_sim + (now - self.anchor_wall) * self.speed * 1e9)
-                    while self.i < len(self.ts) and self.ts[self.i] <= self.sim_ns:
-                        if self.day[self.i] > self.last_day:
-                            break
-                        self.publish_event(self.i)
-                        self.i += 1
-                finished = self.i >= len(self.ts) or self.day[self.i] > self.last_day
+                if self.paused:
+                    finished = self.i >= len(self.ts) or self.day[self.i] > self.last_day
+                else:
+                    finished = self.advance_to(int(self.anchor_sim + (now - self.anchor_wall) * self.speed * 1e9))
             if now - last_clock >= CLOCK_EVERY:
                 self.publish_clock()
                 last_clock = now
