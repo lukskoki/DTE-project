@@ -9,7 +9,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-RAW_DAYS_DIR = DATA_DIR / "raw" / "days"
 CLEAN_DIR = DATA_DIR / "clean"
 EVENTS_FILE = CLEAN_DIR / "events.parquet"
 LABELS_FILE = CLEAN_DIR / "labels.parquet"
@@ -17,12 +16,16 @@ HOME_CONFIG = ROOT / "config" / "home.yaml"
 
 USERS = ["user1", "user2"]
 
-# The 18 activity classes used by the dataset authors (prepare_data.py).
+# Activity classes: the 18 from the authors' prepare_data.py, plus MEDITATE,
+# which appears in a few labels.
 ACTIVITIES = [
     "BATHROOM ACTIVITY", "CHORES", "COOK", "DISHWASHING", "DRESS", "EAT",
-    "LAUNDRY", "MAKE SIMPLE FOOD", "OUT HOME", "PET", "READ", "RELAX",
-    "SHOWER", "SLEEP", "TAKE MEDS", "WATCH TV", "WORK", "OTHER",
+    "LAUNDRY", "MAKE SIMPLE FOOD", "MEDITATE", "OUT HOME", "PET", "READ",
+    "RELAX", "SHOWER", "SLEEP", "TAKE MEDS", "WATCH TV", "WORK", "OTHER",
 ]
+
+# Timestamps in the dataset are UTC; the home is in Spain. Show local time.
+TIMEZONE = "Europe/Madrid"
 
 # BLE beacon room names in the dataset (Spanish) -> names we use everywhere.
 ROOM_NAMES = {
@@ -67,6 +70,7 @@ def activity_topic(user: str) -> str:
     return f"home/residents/{user}/activity"
 
 
-CLOCK_TOPIC = "home/replay/clock"
+CLOCK_TOPIC = "home/replay/clock"        # retained: {sim_ts, speed, day, paused}
+CONTROL_TOPIC = "home/replay/control"    # {action: seek|speed|pause|resume, ...}
 ALERTS_TOPIC = "home/alerts"
 ALL_TOPICS = "home/#"

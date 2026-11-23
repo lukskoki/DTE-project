@@ -1,0 +1,53 @@
+# Hand-curated: what each sensor is attached to, and its room where the BLE vote is weak.
+#
+# Sources
+#   paper: Gómez Ramos et al., "SDHAR-HOME", Sensors 2022 (section 3.2) lists the objects
+#          but not which id is which: contact on fridge, microwave, street door, medicine
+#          drawer and cabinets; vibration on chairs, sofa, bed and cabinets; power plugs on
+#          the TV and the washing machine; temp/humidity on the kitchen hob and near the
+#          shower; one motion sensor per room plus two that split the living room and hall
+#          into zones; light sensors in the bathroom and bedroom.
+#   data:  the id -> object match below comes from which labelled activity is going on
+#          when the sensor fires (lift = how much more often than average), computed by
+#          `python -m pipeline.infer_sensor_rooms`. The numbers are in config/home.yaml.
+#
+# `room` here overrides the automatic BLE vote; leave it out to keep the vote.
+
+c1:  {object: kitchen cabinet (dishes), evidence: "DISHWASHING lift 7, EAT 2.8"}
+c2:  {object: medicine drawer, evidence: "TAKE MEDS lift 80; opened within 2 min of 68 of the 73 medication episodes"}
+c3:  {object: wardrobe door, evidence: "DRESS lift 6"}
+c4:  {object: wardrobe door, evidence: "DRESS lift 8.5"}
+c5:  {object: microwave door, evidence: "MAKE SIMPLE FOOD lift 2.9, EAT 2.8; opened less often than the fridge"}
+c6:  {object: refrigerator door, evidence: "most opened contact (1,038 openings), MAKE SIMPLE FOOD lift 5.6, COOK 2.2"}
+c7:  {object: cleaning cabinet, evidence: "CHORES lift 20"}
+c8:  {object: street door, evidence: "76% of openings within 3 min of someone leaving or coming home"}
+
+m1:  {object: motion (bathroom), evidence: "SHOWER lift 5.9, BATHROOM ACTIVITY 4.1"}
+m2:  {object: motion (study), room: study, evidence: "WORK lift 3.4, CHORES 4.3"}
+m3:  {object: motion (bedroom), evidence: "SLEEP lift 2.8, READ 3.0"}
+m4:  {object: motion (living room, dining zone), evidence: "EAT lift 2.3"}
+m5:  {object: motion (living room, sofa zone), evidence: "WATCH TV lift 2.3, RELAX 2.0"}
+m6:  {object: motion (kitchen), evidence: "COOK lift 2.7, DISHWASHING 3.1"}
+m7:  {object: motion (hall, zone 1), room: hallway, evidence: "no activity stands out; BLE vote weak (bathroom, lift 1.1); paper places a second zone sensor in the hall"}
+m8:  {object: motion (hall, zone 2), evidence: "BLE vote hallway (lift 2.4)"}
+
+v1:  {object: bed (uncertain), evidence: "SLEEP lift 2.5 but also MAKE SIMPLE FOOD 3.0"}
+v2:  {object: kitchen cabinet, evidence: "MAKE SIMPLE FOOD lift 5.2, COOK 3.2"}
+v3:  {object: dining chair, room: living_room, evidence: "EAT lift 2.2; dining zone is in the living room (m4)"}
+v4:  {object: dining chair, room: living_room, evidence: "EAT lift 2.1"}
+v5:  {object: desk chair, evidence: "WORK lift 14"}
+v6:  {object: dining chair, evidence: "EAT lift 3.2"}
+v7:  {object: dining chair, evidence: "EAT lift 2.9"}
+v8:  {object: sofa, evidence: "WATCH TV lift 3.1, RELAX 3.0"}
+v9:  {object: wardrobe, evidence: "DRESS lift 6"}
+v10: {object: bed, evidence: "READ lift 3.7, SLEEP 1.7"}
+v11: {object: pet corner (uncertain), evidence: "PET lift 19"}
+
+p1:  {object: television, room: living_room, evidence: "WATCH TV lift 4.5; paper: plug on the TV"}
+p2:  {object: washing machine, room: kitchen, evidence: "LAUNDRY lift 33; paper: plug on the washing machine. Room is an assumption: the BLE vote (study) only reflects where people are while it runs"}
+
+th1: {object: temp/humidity near shower, room: bathroom, evidence: "humidity 76% during/after SHOWER vs 57% otherwise; paper: near the shower"}
+th2: {object: temp/humidity at hob, room: kitchen, evidence: "+0.9 °C while cooking; paper: on the ceramic hob"}
+
+l1:  {object: light level, evidence: "SHOWER lift 2.6; paper: bathroom"}
+l2:  {object: light level, room: bedroom, evidence: "READ lift 2.3, DRESS 2.2; paper: bedroom"}

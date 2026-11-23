@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from shadowhome.schema import (
-    CLEAN_DIR, DATA_DIR, EVENTS_FILE, EVENT_COLUMNS, LABELS_FILE, ROOM_NAMES, USERS,
+    CLEAN_DIR, DATA_DIR, EVENTS_FILE, EVENT_COLUMNS, LABELS_FILE, ROOM_NAMES,
 )
 
 ZIP_DIR = DATA_DIR / "raw" / "SDHAR-HOME"
@@ -101,7 +101,10 @@ def read_day(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
             elif folder.startswith("BAND_"):
                 user = folder.split("_", 1)[1]
                 if stem in ("bpm", "steps"):
-                    events.append(_rows(df, user, stem, df[stem]))
+                    vals = pd.to_numeric(df[stem], errors="coerce")
+                    if stem == "bpm":  # the band logs -123 and other junk when it loses contact
+                        df, vals = df[vals.between(25, 230)], vals[vals.between(25, 230)]
+                    events.append(_rows(df, user, stem, vals))
             else:
                 events.extend(_ambient(df, folder, stem))
     ev = pd.concat(events, ignore_index=True) if events else pd.DataFrame(columns=EVENT_COLUMNS)

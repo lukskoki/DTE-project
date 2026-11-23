@@ -1,5 +1,16 @@
 # Digital shadow of the SDHAR-HOME smart home.
 # Prepare data first (see README), then: docker compose up --build
+x-python: &python
+  build: .
+  environment: &env
+    MQTT_HOST: mosquitto
+    MQTT_PORT: "1883"
+  volumes:
+    - ./data:/app/data:ro
+    - ./config:/app/config:ro
+  depends_on: [mosquitto]
+  restart: unless-stopped
+
 services:
   mosquitto:
     image: eclipse-mosquitto:2
@@ -7,4 +18,18 @@ services:
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
-  # replay, shadow, inference and dashboard are added in the next steps.
+  replay:
+    <<: *python
+    command: python -m services.replay.main
+    environment:
+      <<: *env
+      REPLAY_SPEED: ${REPLAY_SPEED:-300}
+      REPLAY_DAYS: ${REPLAY_DAYS:-48-62}
+
+  shadow:
+    <<: *python
+    command: uvicorn services.shadow.app:app --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+    environment:
+      <<: *env
+      SHADOW_DB: /tmp/shadow.db
