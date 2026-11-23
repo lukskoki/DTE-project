@@ -31,7 +31,7 @@ from shadowhome.schema import ROOT, TIMEZONE, USERS  # noqa: E402
 
 SHADOW_URL = os.getenv("SHADOW_URL", "http://localhost:8000").rstrip("/")
 REPORTS = ROOT / "reports"
-SPEEDS = [60, 300, 600, 1800, 3600]
+SPEEDS = [60, 120, 300, 600, 1200, 1800, 3600]
 PLOT_CONFIG = {"displayModeBar": False}
 
 CSS = f"""
@@ -224,13 +224,20 @@ def sidebar() -> None:
     with st.sidebar:
         st.markdown("### Replay")
         clock_panel()
+        if "speed" not in st.session_state:      # the controls start at the replay's current setting
+            try:
+                clock = fetch("/state").get("clock") or {}
+            except requests.RequestException:
+                clock = {}
+            st.session_state.speed = min(SPEEDS, key=lambda s: abs(s - float(clock.get("speed") or 600)))
+            st.session_state.day = int(clock.get("day") or 48)
         c1, c2 = st.columns(2)
         c1.button("⏸ Pause", on_click=send, args=({"action": "pause"},), width="stretch")
         c2.button("▶ Play", on_click=send, args=({"action": "resume"},), width="stretch")
-        speed = st.select_slider("Speed (simulated seconds per second)", SPEEDS, value=600, key="speed")
+        speed = st.select_slider("Speed (simulated seconds per second)", SPEEDS, key="speed")
         st.button("Set speed", on_click=lambda: send({"action": "speed", "value": st.session_state.speed}),
                   width="stretch")
-        day = st.number_input("Dataset day (test days are 48–62)", min_value=1, max_value=62, value=48, step=1)
+        day = st.number_input("Dataset day (test days are 48–62)", min_value=1, max_value=62, step=1, key="day")
         st.button("Jump to day", on_click=send, args=({"action": "seek", "day": int(day)},),
                   width="stretch", type="primary")
         st.caption(f"Speed {speed}× plays one day in {86400 / speed / 60:.0f} min. "
@@ -307,7 +314,7 @@ def render_timeline(user: str, date: str) -> None:
         st.markdown("**Alerts this day**")
         if tl["alerts"]:
             st.dataframe(pd.DataFrame([{"time": ch.hhmm(a["ts"]), "kind": a["kind"].replace("_", " "),
-                                        "usual window": a["expected_at"], "message": a["message"]}
+                                        "usual window": a["expected_at"].replace("-", "–")}
                                        for a in tl["alerts"]]), hide_index=True, width="stretch")
         else:
             st.caption("None.")
@@ -423,9 +430,11 @@ def model_page() -> None:
     c[2].metric("Accuracy within ±10 min (authors' rule)", f"{ours['accuracy_pm10min']:.1%}",
                 f"{ours['accuracy_pm10min'] - auth['accuracy_pm10min']:+.1%} vs authors' "
                 f"{auth['accuracy_pm10min']:.1%}")
-    c[3].metric("Test minutes", f"{m['ours']['minutes']:,}",
-                f"user1 {m['per_user']['user1']['accuracy']:.1%} · user2 {m['per_user']['user2']['accuracy']:.1%} "
-                "accuracy", delta_color="off", delta_arrow="off")
+    c[3].metric("Test minutes compared", f"{ours['minutes']:,}",
+                f"of {m['ours']['minutes']:,}; the authors' file covers {auth['coverage']:.0%}",
+                delta_color="off", delta_arrow="off")
+    st.caption(f"Accuracy per resident, all {m['ours']['minutes']:,} test minutes: "
+               f"user1 {m['per_user']['user1']['accuracy']:.1%}, user2 {m['per_user']['user2']['accuracy']:.1%}.")
     left, right = st.columns(2, gap="large")
     with left:
         st.markdown("**F1 per activity**")
@@ -456,15 +465,16 @@ def model_page() -> None:
                                        for u, ws in a["routines"].items() for w in ws]),
                          hide_index=True, width="stretch")
             st.markdown("**Routine alerts on the test days**")
-            ev = a["drawer_only"]
-            st.dataframe(pd.DataFrame([{"routine": ch.nice(act), "windows": s["windows"],
-                                        "real misses": s["true_misses"], "alerts": s["alerts"],
-                                        "correct": s["correct_alerts"], "false": s["false_alerts"],
-                                        "not flagged": s["missed_misses"]}
+            ev = a.get("drawer_or_model") or a["drawer_only"]
+            st.dataframe(pd.DataFrame([{"routine": "Medication" if act == "TAKE MEDS" else "Meals",
+                                        "windows": s["windows"], "misses": s["true_misses"],
+                                        "alerts": s["alerts"], "correct": s["correct_alerts"],
+                                        "false": s["false_alerts"], "unflagged": s["missed_misses"]}
                                        for act, s in ev["real"].items()]), hide_index=True, width="stretch")
             st.caption("A window is a resident's usual meal or medication time on one day. An alert is raised "
                        "when nothing was detected by the deadline (30 min after the window) and the resident "
-                       "was at home.")
+                       "was at home. A meal is at least 3 minutes the model calls Eat (chosen on the validation "
+                       "days); medication is the medicine drawer opening, or the model saying Take meds.")
             inj = ev["injected_missed_doses"]
             st.caption(f"Simulated missed doses (medicine-drawer events deleted, model re-run): "
                        f"{inj['flagged']} of {inj['trials']} flagged.")
