@@ -1,0 +1,62 @@
+{
+  "user1": [
+    {
+      "activity": "EAT",
+      "start_min": 341,
+      "end_min": 374,
+      "deadline_min": 404,
+      "support": 0.64,
+      "n": 25
+    },
+    {
+      "activity": "EAT",
+      "start_min": 880,
+      "end_min": 944,
+      "deadline_min": 974,
+      "support": 0.72,
+      "n": 29
+    },
+    {
+      "activity": "EAT",
+      "start_min": 1271,
+      "end_min": 1377,
+      "deadline_min": 1407,
+      "support": 0.82,
+      "n": 32
+    }
+  ],
+  "user2": [
+    {
+      "activity": "EAT",
+      "start_min": 473,
+      "end_min": 728,
+      "deadline_min": 758,
+      "support": 0.79,
+      "n": 31
+    },
+    {
+      "activity": "EAT",
+      "start_min": 880,
+      "end_min": 942,
+      "deadline_min": 972,
+      "support": 0.41,
+      "n": 16
+    },
+    {
+      "activity": "EAT",
+      "start_min": 1273,
+      "end_min": 1370,
+      "deadline_min": 1400,
+      "support": 0.64,
+      "n": 25
+    },
+    {
+      "activity": "TAKE MEDS",
+      "start_min": 1356,
+      "end_min": 1557,
+      "deadline_min": 1587,
+      "support": 0.77,
+      "n": 30
+    }
+  ]
+}

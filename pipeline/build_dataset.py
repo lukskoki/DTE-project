@@ -29,6 +29,7 @@ from shadowhome.schema import (
 )
 
 ZIP_DIR = DATA_DIR / "raw" / "SDHAR-HOME"
+AUTHOR_PRED_FILE = CLEAN_DIR / "author_predictions.parquet"
 MAX_LABEL_HOURS = 14  # an interval longer than this means a gap in labelling
 
 
@@ -76,9 +77,9 @@ def _ambient(df: pd.DataFrame, folder: str, sid: str) -> list[pd.DataFrame]:
     return []
 
 
-def read_day(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+def read_day(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     day = int(re.search(r"DAY_(\d+)", zip_path.name).group(1))
-    events, labels = [], []
+    events, labels, preds = [], [], []
     with zipfile.ZipFile(zip_path) as zf:
         for name in zf.namelist():
             if not name.endswith(".csv") or name.endswith("gyro.csv"):
@@ -90,10 +91,11 @@ def read_day(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
             df = _read(zf, name)
             if df.empty:
                 continue
-            if folder == "Activities" and stem.startswith("activity_user_"):
+            if folder == "Activities" and stem.startswith(("activity_user_", "activity_predicted_user_")):
                 user = "user" + stem.rsplit("_", 1)[-1]
-                labels.append(pd.DataFrame({"user": user, "ts": df["ts"],
-                                            "activity": df.iloc[:, 1].astype(str).str.strip()}))
+                rows = pd.DataFrame({"user": user, "ts": df["ts"],
+                                     "activity": df.iloc[:, 1].astype(str).str.strip()})
+                (preds if "predicted" in stem else labels).append(rows)
             elif folder == "Presences":
                 user = stem.split("_")[0]
                 room = df["state"].map(ROOM_NAMES).fillna("unknown")
@@ -109,9 +111,11 @@ def read_day(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
                 events.extend(_ambient(df, folder, stem))
     ev = pd.concat(events, ignore_index=True) if events else pd.DataFrame(columns=EVENT_COLUMNS)
     ev["day"] = day
-    lb = pd.concat(labels, ignore_index=True) if labels else pd.DataFrame(columns=["user", "ts", "activity"])
-    lb["day"] = day
-    return ev, lb
+    empty = pd.DataFrame(columns=["user", "ts", "activity"])
+    lb = pd.concat(labels, ignore_index=True) if labels else empty.copy()
+    pr = pd.concat(preds, ignore_index=True) if preds else empty.copy()
+    lb["day"], pr["day"] = day, day
+    return ev, lb, pr
 
 
 def dedupe(ev: pd.DataFrame) -> pd.DataFrame:
@@ -150,11 +154,12 @@ def main() -> int:
     if not zips:
         print(f"No zips in {ZIP_DIR}. Run scripts/download_data.sh first.", file=sys.stderr)
         return 1
-    all_ev, all_lb = [], []
+    all_ev, all_lb, all_pr = [], [], []
     for z in zips:
-        ev, lb = read_day(z)
+        ev, lb, pr = read_day(z)
         all_ev.append(ev)
         all_lb.append(lb)
+        all_pr.append(pr)
         print(f"{z.name}: {len(ev):>7} events, {len(lb):>3} label changes")
     ev = pd.concat(all_ev, ignore_index=True)
     ev["ts"] = pd.to_datetime(ev["ts"], utc=True)
@@ -166,6 +171,8 @@ def main() -> int:
     CLEAN_DIR.mkdir(parents=True, exist_ok=True)
     ev.to_parquet(EVENTS_FILE, index=False)
     labels.to_parquet(LABELS_FILE, index=False)
+    # The dataset authors' own model output, kept as a baseline to compare against.
+    to_intervals(pd.concat(all_pr, ignore_index=True)).to_parquet(AUTHOR_PRED_FILE, index=False)
     print(f"\n{len(ev):,} events -> {EVENTS_FILE.relative_to(DATA_DIR.parent)}")
     print(f"{len(labels):,} label intervals -> {LABELS_FILE.relative_to(DATA_DIR.parent)}")
     print(labels.assign(h=(labels.end - labels.start).dt.total_seconds() / 3600)

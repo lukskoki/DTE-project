@@ -14,6 +14,13 @@ EVENTS_FILE = CLEAN_DIR / "events.parquet"
 LABELS_FILE = CLEAN_DIR / "labels.parquet"
 HOME_CONFIG = ROOT / "config" / "home.yaml"
 
+# Chronological split by dataset day (DAY_1 = 2022-04-23; the day files are cut at UTC midnight).
+# The model and the routines learn from the train days only; the replay plays the test days.
+FIRST_DAY = "2022-04-23"
+TRAIN_DAYS = range(1, 41)
+VAL_DAYS = range(41, 48)
+TEST_DAYS = range(48, 63)
+
 USERS = ["user1", "user2"]
 
 # Activity classes: the 18 from the authors' prepare_data.py, plus MEDITATE,
